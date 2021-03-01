@@ -17,45 +17,56 @@ package com.example.androiddevchallenge
 
 import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import com.example.androiddevchallenge.screen.DetailScreen
+import com.example.androiddevchallenge.screen.OctoDex
 import com.example.androiddevchallenge.ui.theme.MyTheme
 
 class MainActivity : AppCompatActivity() {
+    private val viewModel: MainViewModel by viewModels()
+
+    override fun onBackPressed() {
+        if (viewModel.onBackPressed()) {
+            super.onBackPressed()
+        }
+    }
+
+    @ExperimentalFoundationApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MyTheme {
-                MyApp()
+                val currentScreen: Screen by viewModel.currentScreen.observeAsState(initial = Screen.DexMain)
+                MyApp(
+                    currentScreen = currentScreen,
+                    onBackPressed = { onBackPressed() },
+                    viewModel = viewModel
+                )
             }
         }
     }
 }
 
-// Start building your app here!
-@Composable
-fun MyApp() {
-    Surface(color = MaterialTheme.colors.background) {
-        Text(text = "Ready... Set... GO!")
-    }
+sealed class Screen {
+    object DexMain : Screen()
+    class DexDetails(val cat: OctoCat) : Screen()
 }
 
-@Preview("Light Theme", widthDp = 360, heightDp = 640)
 @Composable
-fun LightPreview() {
-    MyTheme {
-        MyApp()
-    }
-}
-
-@Preview("Dark Theme", widthDp = 360, heightDp = 640)
-@Composable
-fun DarkPreview() {
-    MyTheme(darkTheme = true) {
-        MyApp()
+fun MyApp(viewModel: MainViewModel, currentScreen: Screen = Screen.DexMain, onBackPressed: () -> Unit) {
+    when (currentScreen) {
+        is Screen.DexDetails -> {
+            DetailScreen(octoCat = currentScreen.cat) {
+                onBackPressed()
+            }
+        }
+        is Screen.DexMain -> {
+            OctoDex(openCatDetails = { viewModel.openCatDetails() }, viewModel = viewModel, showNext = { viewModel.showNext() }, showPrev = { viewModel.showPrev() })
+        }
     }
 }
